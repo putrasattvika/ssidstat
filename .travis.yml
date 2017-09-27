@@ -2,13 +2,23 @@ sudo: required
 
 arch:
   packages:
-    - "python2-setuptools"
-    - "vnstat"
-    - "python2"
-    - "python2-pip"
+  - python2-setuptools
+  - vnstat
+  - python2
+  - python2-pip
 
   script:
-    - "makepkg"
+  - makepkg
+  - cp *.pkg.tar.xz ssidstat.pkg.tar.xz
 
 script:
-  - "curl -s https://raw.githubusercontent.com/mikkeloscar/arch-travis/master/arch-travis.sh | bash"
+  - curl -s https://raw.githubusercontent.com/mikkeloscar/arch-travis/master/arch-travis.sh | bash
+
+deploy:
+  provider: releases
+  api_key:
+    secure: aVIwiOGigElc1Q6WpAoDMlhJjgJdxhDWEtteq6ncjR233EpS7EDBVCY0UlGepjMcaa0TEW7Qb4dEHKKA/O0yGWAHpsr+n1ugjugWUf6cIQTonsgMVyOrTVjeJ3rRCFDb/PEBOW9dqyWN1EaYKUEAvoEXYtMFH6rz8tOrWBOMHeZJVXEZ6tsR1uZERR5jlC7GSVl9iEvCL1tkoo1/8ZyBYoI27g6ZIYnJz6By7Vpq0uhXB0Rm2/PiymblUOsedhyiW1fWZzuTJALJbaEJb/DkriCOqHaQvhioRlJuxSP9A3svczWTFltJKgOmUoFq+uX24kKppTk5uhHakpDRCouAz59XRpJgD9nQ/AzWNCTo3OLlXDNyiS5KqM/CBvfFUkNkZGmITqtEEh/ZZ+R0nVWkvIezrRRoWNHffEn97GAb/UqQmfP6PbxHI0tLRknJ3+Q4EQeDZuxbSXy1fAvpbcGN1vIxYYDQhUa5SSe2Py6wxv4qQzKd6ZFettaZqo1XRZbPbshQS5EZCJqbzALko0Ztrqo4JOfpA/bYZEmS8Xy6PtRdMN6jCmQOXZdBMuKkoBbh+fwNl7n70Cp5mwTWlUscH07trMQeq9ubf+s6QUyvXIYcAtycxEJysvbg0/KFPqA5oF3FcIBj0JRZkRh+W/roOMxlfwBlRWaMcELkKcUh4qY=
+  file: ssidstat.pkg.tar.xz
+  on:
+    repo: putrasattvika/ssidstat
+    tags: true
