@@ -1,4 +1,10 @@
+# Arch PKGBUILD directories
+/pkg/
+/src/
+/ssidstat-git/
+/**/*.pkg.tar.xz
+
+# DB and Python stuff
 /**/*.db
 /**/*.pyc
-/dist/
 /*.egg-info
