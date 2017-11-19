@@ -14,4 +14,7 @@ remove:
 	pacman -R ssidstat
 
 clean:
-	rm -rf *.pkg.tar.xz ssidstat-local.zip src/ pkg/ ssidstat-git/
+	rm -rf *.pkg.tar.xz ssidstat-local.zip src/ pkg/ ssidstat-git/ && find . -type f | grep -e ".pyc" | xargs rm
+
+test:
+	python2 -m ssidstat.test.common.db_test
