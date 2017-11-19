@@ -17,17 +17,27 @@ def get_todays_traffic(adapter):
 
 	return None
 
-def get_adapters_ssid():
-	nmcli_p = subprocess.Popen(['nmcli', '-t', 'connection', 'show', '--active'], stdout=subprocess.PIPE)
-	out, err = nmcli_p.communicate()
+def get_adapters():
+	sys_class_net_p = subprocess.Popen(['ls', '-1', '/sys/class/net'], stdout=subprocess.PIPE)
+	sys_class_net_out, sys_class_net_err = sys_class_net_p.communicate()
 
-	connections_str = out.split('\n')[:-1]
+	return sys_class_net_out.split('\n')[:-1]
+
+def get_adapter_ssid(adapter):
+	iw_p = subprocess.Popen(['iw {} link | grep -Poe "SSID: .*"'.format(adapter)], stdout=subprocess.PIPE, shell=True)
+	iw_out, iw_err = iw_p.communicate()
+
+	ssid = iw_out[6:].strip()
+	if len(ssid) == 0:
+		ssid = adapter
+
+	return ssid
+
+def get_adapters_ssid():
+	adapters = get_adapters()
 
 	connections = {}
-	for conn in connections_str:
-		ssid = conn.split(':')[0]
-		adapter = conn.split(':')[-1]
-
-		connections[adapter] = ssid
+	for adapter in adapters:
+		connections[adapter] = get_adapter_ssid(adapter)
 
 	return connections

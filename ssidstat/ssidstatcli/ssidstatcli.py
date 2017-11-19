@@ -12,7 +12,7 @@ def byte_format(size):
 	size *= 1024
 	prefixes = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
 
-	result = ''
+	result = '{:.2f} {}'.format(size, prefixes[0])
 	for i in xrange(len(prefixes)):
 		if size/(2.0**(10*i)) >= 1:
 			result = '{:.2f} {}'.format(size/(2.0**(10*i)), prefixes[i])

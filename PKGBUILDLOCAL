@@ -4,7 +4,7 @@ pkgrel=1
 
 pkgdesc="Simple per-SSID bandwidth usage monitor"
 arch=(i686 x86_64)
-license=('GPLv2')
+license=('Apache')
 
 source=('ssidstat-local.zip')
 sha256sums=('SKIP')

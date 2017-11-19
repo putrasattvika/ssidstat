@@ -1,10 +1,10 @@
 pkgname=ssidstat
-pkgver=20170927
+pkgver=20171119
 pkgrel=1
 
 pkgdesc="Simple per-SSID bandwidth usage monitor"
 arch=(i686 x86_64)
-license=('GPLv2')
+license=('Apache')
 
 source=('ssidstat-git::git+https://github.com/putrasattvika/ssidstat.git')
 sha256sums=('SKIP')

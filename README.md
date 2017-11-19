@@ -4,4 +4,4 @@ Simple per-SSID bandwidth usage monitor
 ## Requirements
  - python2
  - vnstat
- - nmcli
+ - iw
