@@ -96,6 +96,7 @@ class SSIDStatDB(object):
 			'rx': result[2],
 			'tx': result[3]
 		}
+
 	def query_all_ssid_stat(self, date=datetime.now()):
 		conn = sqlite3.connect(self.dbfile)
 		c = conn.cursor()

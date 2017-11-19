@@ -8,7 +8,7 @@ setup(
 	description			= 'Simple per-SSID bandwidth usage monitor',
 	author				= 'Putra Sattvika',
 	author_email		= 'sattvikaputra@gmail.com',
-	packages			= ['ssidstat', 'ssidstatd'],
+	packages			= ['ssidstat', 'ssidstat.common', 'ssidstat.ssidstatcli', 'ssidstat.ssidstatd'],
 	scripts				= ['scripts/ssidstat', 'scripts/ssidstatd'],
 	install_requires	= ['tabulate']
 )

@@ -1,5 +1,5 @@
 #!/usr/bin/env python2
 
-import ssidstat
+from ssidstat import ssidstatcli
 
-ssidstat.main()
+ssidstatcli.main()

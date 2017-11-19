@@ -1,9 +1,10 @@
 #!/usr/bin/env python2
 
-import db
 import sys
 import argparse
 import tabulate
+
+from ssidstat.common import db
 
 __DEFAULT_DB_FILE   = '/var/lib/ssidstat/ssidstatd.db'
 

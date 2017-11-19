@@ -1,9 +1,10 @@
 import time
 
-import db
 import daemon
 import sysutils
  
+from ssidstat.common import db
+
 class MonitorDaemon(daemon.Daemon):
 	def __init__(self, dbfile, pidfile, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
 		daemon.Daemon.__init__(self, pidfile, stdin=stdin, stdout=stdout, stderr=stderr)

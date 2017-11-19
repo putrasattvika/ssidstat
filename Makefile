@@ -12,3 +12,6 @@ install-local:
 
 remove:
 	pacman -R ssidstat
+
+clean:
+	rm -rf *.pkg.tar.xz ssidstat-local.zip src/ pkg/ ssidstat-git/
