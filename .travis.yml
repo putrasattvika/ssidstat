@@ -9,7 +9,7 @@ arch:
     - make
 
   script:
-    - pip2 install -r requirements.txt
+    - sudo pip2 install -r requirements.txt
     - make test
     - makepkg
 
