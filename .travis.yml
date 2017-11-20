@@ -1,20 +1,19 @@
-language: python
 sudo: required
 
 arch:
   packages:
-  - python2-setuptools
-  - vnstat
-  - python2
-  - python2-pip
-  - make
+    - python2-setuptools
+    - vnstat
+    - python2
+    - python2-pip
+    - make
 
   script:
-  - makepkg
+    - pip2 install -r requirements.txt
+    - make test
+    - makepkg
 
 script:
-  - pip2 install -r requirements.txt
-  - make test
   - curl -s https://raw.githubusercontent.com/mikkeloscar/arch-travis/master/arch-travis.sh | bash
 
 deploy:
