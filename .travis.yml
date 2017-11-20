@@ -6,11 +6,13 @@ arch:
   - vnstat
   - python2
   - python2-pip
+  - make
 
   script:
   - makepkg
 
 script:
+  - make test
   - curl -s https://raw.githubusercontent.com/mikkeloscar/arch-travis/master/arch-travis.sh | bash
 
 deploy:

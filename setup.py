@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
 	name				= 'ssidstat',
-	version				= '0.2',
+	version				= '0.0.2',
 	description			= 'Simple per-SSID bandwidth usage monitor',
 	author				= 'Putra Sattvika',
 	author_email		= 'sattvikaputra@gmail.com',

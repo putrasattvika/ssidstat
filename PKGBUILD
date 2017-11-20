@@ -1,5 +1,5 @@
 pkgname=ssidstat
-pkgver=20171119
+pkgver=0.0.2
 pkgrel=1
 
 pkgdesc="Simple per-SSID bandwidth usage monitor"
