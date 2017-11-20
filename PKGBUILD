@@ -9,7 +9,7 @@ license=('Apache')
 source=('ssidstat-git::git+https://github.com/putrasattvika/ssidstat.git')
 sha256sums=('SKIP')
 
-depends=(vnstat python2 python2-pip)
+depends=(python2 python2-pip)
 makedepends=('python2-setuptools')
 
 package() {

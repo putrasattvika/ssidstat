@@ -17,8 +17,8 @@ class SSIDStatDB(object):
 		conn = sqlite3.connect(self.dbfile)
 		c = conn.cursor()
 
-		query = '''
-			CREATE TABLE IF NOT EXISTS ssidstat (
+		c.execute('''
+			CREATE TABLE IF NOT EXISTS ssid_traffic_history (
 				date text,
 				adapter text,
 				ssid text,
@@ -26,19 +26,27 @@ class SSIDStatDB(object):
 				tx integer,
 				PRIMARY KEY (date, adapter, ssid)
 			)
-		'''
+		''')
 
-		c.execute(query)
+		c.execute('''
+			CREATE TABLE IF NOT EXISTS boot_traffic_history (
+				boot_id text,
+				adapter text,
+				rx integer,
+				tx integer,
+				PRIMARY KEY (boot_id, adapter)
+			)
+		''')
 
 		conn.commit()
 		conn.close()
 
-	def update_db(self, adapter, ssid, rx, tx, date=datetime.now()):
+	def update_ssid_traffic_history(self, adapter, ssid, rx, tx, date=datetime.now()):
 		conn = sqlite3.connect(self.dbfile)
 		c = conn.cursor()
 
 		query = '''
-			INSERT OR REPLACE INTO ssidstat (date, adapter, ssid, rx, tx) 
+			INSERT OR REPLACE INTO ssid_traffic_history (date, adapter, ssid, rx, tx) 
 				VALUES ( ?, ?, ?, ?, ? );
 		'''
 
@@ -47,40 +55,14 @@ class SSIDStatDB(object):
 		conn.commit()
 		conn.close()
 
-	def query_adapter_stat(self, adapter, date=datetime.now()):
-		conn = sqlite3.connect(self.dbfile)
-		c = conn.cursor()
-
-		query = '''
-			SELECT date, adapter, sum(rx), sum(tx)
-			FROM ssidstat
-			WHERE adapter=? AND date=?
-			GROUP BY date, adapter;
-		'''
-
-		c.execute(query, (adapter, self.date_to_str(date)))
-		result = c.fetchone()
-		conn.close()
-
-		if result == None:
-			result = (self.date_to_str(date), adapter, 0, 0)
-
-		return {
-			'date': date,
-			'adapter': adapter,
-			'rx': result[2],
-			'tx': result[3]
-		}
-
 	def query_ssid_stat(self, ssid, date=datetime.now()):
 		conn = sqlite3.connect(self.dbfile)
 		c = conn.cursor()
 
 		query = '''
-			SELECT date, ssid, sum(rx), sum(tx)
-			FROM ssidstat
-			WHERE ssid=? AND date=?
-			GROUP BY date, ssid;
+			SELECT date, ssid, rx, tx
+			FROM ssid_traffic_history
+			WHERE ssid=? AND date=?;
 		'''
 
 		c.execute(query, (ssid, self.date_to_str(date)))
@@ -102,10 +84,10 @@ class SSIDStatDB(object):
 		c = conn.cursor()
 
 		query = '''
-			SELECT date, ssid, sum(rx), sum(tx)
-			FROM ssidstat
+			SELECT date, ssid, rx, tx, adapter
+			FROM ssid_traffic_history
 			WHERE date=?
-			GROUP BY date, ssid;
+			ORDER BY adapter, ssid;
 		'''
 
 		c.execute(query, (self.date_to_str(date),))
@@ -115,10 +97,69 @@ class SSIDStatDB(object):
 		d_result = {}
 
 		for r in results:
-			d_result[r[1]] = {
+			date, ssid, rx, tx, adapter = r
+
+			if adapter not in d_result:
+				d_result[adapter] = []
+
+			d_result[adapter].append({
+				'ssid': ssid,
 				'date': date,
-				'rx': r[2],
-				'tx': r[3]
-			}
+				'adapter': adapter,
+				'rx': rx,
+				'tx': tx
+			})
 
 		return d_result
+
+	def update_boot_traffic_history(self, boot_id, adapter, rx, tx):
+		conn = sqlite3.connect(self.dbfile)
+		c = conn.cursor()
+
+		query = '''
+			INSERT OR REPLACE INTO boot_traffic_history (boot_id, adapter, rx, tx) 
+				VALUES ( ?, ?, ?, ? );
+		'''
+
+		c.execute(query, (boot_id, adapter, rx, tx))
+
+		conn.commit()
+		conn.close()
+
+	def query_boot_traffic_history(self, boot_id, adapter):
+		conn = sqlite3.connect(self.dbfile)
+		c = conn.cursor()
+
+		query = '''
+			SELECT rx, tx
+			FROM boot_traffic_history
+			WHERE boot_id=? AND adapter=?;
+		'''
+
+		c.execute(query, (boot_id, adapter))
+		result = c.fetchone()
+		conn.close()	
+
+		if result == None:
+			return None
+
+		return {
+			'boot_id': boot_id,
+			'adapter': adapter,
+			'rx': result[0],
+			'tx': result[1]
+		}
+
+	def clear_boot_traffic_history(self, adapter):
+		conn = sqlite3.connect(self.dbfile)
+		c = conn.cursor()
+
+		query = '''
+			DELETE FROM boot_traffic_history
+			WHERE adapter=?;
+		'''
+
+		c.execute(query, (adapter, ))
+
+		conn.commit()
+		conn.close()

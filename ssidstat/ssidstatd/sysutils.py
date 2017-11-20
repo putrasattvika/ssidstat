@@ -1,21 +1,27 @@
 import os
+import re
 import json
 import subprocess
 
-def get_adapters_stats():
-	vnstat_p = subprocess.Popen(['vnstat', '--json'], stdout=subprocess.PIPE)
-	out, err = vnstat_p.communicate()
+def get_boot_id():
+	return open('/proc/sys/kernel/random/boot_id').read().strip()
 
-	return json.loads(out)
+def get_adapters_traffic():
+	adapter_lines = open('/proc/net/dev', 'r').readlines()[2:]
 
-def get_todays_traffic(adapter):
-	stat = get_adapters_stats()
+	stats = {}
+	for line in adapter_lines:
+		adapter, traffic = line.split(':')
+		adapter = adapter.strip()
+		traffic = traffic.strip()
 
-	for iface in stat['interfaces']:
-		if iface['id'] == adapter:
-			return iface['traffic']['days'][0]
+		traffic_split = re.sub('[ ]+', ';', traffic).split(';')
+		stats[adapter] = {
+			'rx': int(traffic_split[0]),
+			'tx': int(traffic_split[8])
+		}
 
-	return None
+	return stats
 
 def get_adapters():
 	sys_class_net_p = subprocess.Popen(['ls', '-1', '/sys/class/net'], stdout=subprocess.PIPE)

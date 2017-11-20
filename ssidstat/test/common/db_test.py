@@ -15,38 +15,23 @@ class SetupDB(unittest.TestCase):
 	def tearDown(self):
 		os.remove(TEST_DB_PATH)
 
-class UpdateTest(SetupDB):
-	def test_update(self):
+class UpdateSSIDTrafficHistoryTest(SetupDB):
+	def test_update_ssid_traffic_history(self):
 		try:
-			self.db.update_db('adapter_name', 'ssid_name', 100, 200)
+			self.db.update_ssid_traffic_history('adapter_name', 'ssid_name', 100, 200)
 		except:
 			self.fail()
 
-class QueryTest(SetupDB):
+class QuerySSIDTrafficHistoryTest(SetupDB):
 	def setUp(self):
-		super(QueryTest, self).setUp()
+		super(QuerySSIDTrafficHistoryTest, self).setUp()
 
-		self.db.update_db('adapter0', 'ssid0', 100, 200)
-		self.db.update_db('adapter0', 'ssid1', 105, 205)
-		self.db.update_db('adapter0', 'ssid2', 110, 210)
+		self.db.update_ssid_traffic_history('adapter0', 'ssid0', 100, 200)
+		self.db.update_ssid_traffic_history('adapter0', 'ssid1', 105, 205)
+		self.db.update_ssid_traffic_history('adapter0', 'ssid2', 110, 210)
 
-		self.db.update_db('adapter1', 'ssid1', 10, 20)
-		self.db.update_db('adapter1', 'ssid3', 15, 25)
-
-	def test_query_adapter_stat(self):
-		adapter0_stat = self.db.query_adapter_stat('adapter0')
-		adapter1_stat = self.db.query_adapter_stat('adapter1')
-
-		self.assertEqual(len(adapter0_stat), 4)
-		self.assertEqual(len(adapter1_stat), 4)
-
-		self.assertEqual(adapter0_stat['adapter'], 'adapter0')
-		self.assertEqual(adapter0_stat['rx'], 315)
-		self.assertEqual(adapter0_stat['tx'], 615)
-
-		self.assertEqual(adapter1_stat['adapter'], 'adapter1')
-		self.assertEqual(adapter1_stat['rx'], 25)
-		self.assertEqual(adapter1_stat['tx'], 45)
+		self.db.update_ssid_traffic_history('adapter1', 'ssid1', 10, 20)
+		self.db.update_ssid_traffic_history('adapter1', 'ssid3', 15, 25)
 
 	def test_query_ssid_stat(self):
 		ssid0_stat = self.db.query_ssid_stat('ssid0')
@@ -58,9 +43,13 @@ class QueryTest(SetupDB):
 	def test_query_all_ssid_stat(self):
 		q = self.db.query_all_ssid_stat()
 
-		self.assertEqual(len(q), 4)
-		self.assertEqual(q['ssid0']['rx'], 100)
-		self.assertEqual(q['ssid1']['rx'], 115)
+		self.assertEqual(len(q), 2)
+		self.assertEqual(len(q['adapter0']), 3)
+		self.assertEqual(len(q['adapter1']), 2)
+		self.assertEqual(q['adapter0'][0]['ssid'], 'ssid0')
+		self.assertEqual(q['adapter0'][0]['rx'], 100)
+		self.assertEqual(q['adapter1'][0]['ssid'], 'ssid1')
+		self.assertEqual(q['adapter1'][0]['rx'], 10)
 
 if __name__ == '__main__':
 	unittest.main()

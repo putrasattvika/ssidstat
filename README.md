@@ -2,6 +2,5 @@
 Simple per-SSID bandwidth usage monitor
 
 ## Requirements
- - python2
- - vnstat
+ - python2 && python2-pip
  - iw

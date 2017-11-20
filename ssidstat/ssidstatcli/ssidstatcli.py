@@ -9,7 +9,6 @@ from ssidstat.common import db
 __DEFAULT_DB_FILE   = '/var/lib/ssidstat/ssidstatd.db'
 
 def byte_format(size):
-	size *= 1024
 	prefixes = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
 
 	result = '{:.2f} {}'.format(size, prefixes[0])
@@ -22,9 +21,18 @@ def byte_format(size):
 	return result
 
 def output(stats):
-	headers = ['SSID', 'Receive (rx)', 'Transmit (tx)', 'Total']
-	table = [[ssid, byte_format(stats[ssid]['rx']), byte_format(stats[ssid]['tx']), 
-				byte_format(stats[ssid]['rx'] + stats[ssid]['tx'])] for ssid in stats]
+	headers = ['Adapter', 'SSID', 'Receive (rx)', 'Transmit (tx)', 'Total']
+	table = []
+
+	for adapter in stats:
+		for ssid_stat in stats[adapter]:
+			table.append([
+				adapter,
+				ssid_stat['ssid'],
+				byte_format(ssid_stat['rx']),
+				byte_format(ssid_stat['tx']),
+				byte_format(ssid_stat['rx'] + ssid_stat['tx'])
+			])
 
 	print tabulate.tabulate(table, headers=headers)
 

@@ -3,7 +3,6 @@ sudo: required
 arch:
   packages:
     - python2-setuptools
-    - vnstat
     - python2
     - python2-pip
     - make
