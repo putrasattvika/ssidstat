@@ -1,5 +1,5 @@
 pkgname=ssidstat
-pkgver=0.0.3
+pkgver=$(python2 -c "print __import__('ssidstat').__version__")
 pkgrel=1
 
 pkgdesc="Simple per-SSID bandwidth usage monitor"

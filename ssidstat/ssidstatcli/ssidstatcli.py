@@ -3,6 +3,7 @@
 import sys
 import argparse
 import tabulate
+import ssidstat
 
 from ssidstat.common import db
 
@@ -38,10 +39,15 @@ def output(stats):
 
 def main():
 	parser = argparse.ArgumentParser()
+	parser.add_argument("-v", "--version", action="store_true", help="show ssidstat version")
 	parser.add_argument("--db", help="database file, default is {}".format(__DEFAULT_DB_FILE), default=__DEFAULT_DB_FILE)
 	parser.add_argument("--interface", "-i", help="select one specific interface", default="all")
 
 	opts = parser.parse_args()
+
+	if opts.version:
+		print 'SSIDStat/SSIDStatd v{}'.format(ssidstat.__version__)
+		return
 
 	try:
 		ssidstat_db = db.SSIDStatDB(opts.db)

@@ -2,9 +2,13 @@
 
 from setuptools import setup
 
+# set version
+execfile('ssidstat/version.py')
+
+# setup
 setup(
 	name				= 'ssidstat',
-	version				= '0.0.3',
+	version				= __version__,
 	description			= 'Simple per-SSID bandwidth usage monitor',
 	author				= 'Putra Sattvika',
 	author_email		= 'sattvikaputra@gmail.com',
