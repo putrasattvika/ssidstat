@@ -28,7 +28,6 @@ class MonitorDaemon(daemon.Daemon):
 			ssid = adapters_ssid[adapter]
 
 			recorded_adapter_usage = self.db.query_boot_traffic_history(self.boot_id, adapter)
-			recorded_ssid_usage = self.db.query_ssid_stat(ssid)
 
 			if not recorded_adapter_usage:
 				self.db.clear_boot_traffic_history(adapter)
@@ -43,13 +42,10 @@ class MonitorDaemon(daemon.Daemon):
 			delta_rx = adapters_stat[adapter]['rx'] - recorded_adapter_usage['rx']
 			delta_tx = adapters_stat[adapter]['tx'] - recorded_adapter_usage['tx']
 
-			new_rx = recorded_ssid_usage['rx'] + delta_rx
-			new_tx = recorded_ssid_usage['tx'] + delta_tx
-
 			self.db.update_boot_traffic_history(
 				self.boot_id, adapter, 
 				adapters_stat[adapter]['rx'],
 				adapters_stat[adapter]['tx']
 			)
 
-			self.db.update_ssid_traffic_history(adapter, ssid, new_rx, new_tx)
+			self.db.add_ssid_traffic_history(adapter, ssid, delta_rx, delta_tx)

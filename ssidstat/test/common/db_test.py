@@ -1,7 +1,8 @@
 import os
+import time
 import unittest
 
-from ssidstat.common.db import SSIDStatDB
+import ssidstat.common.db
 
 TEST_DB_PATH = 'test.db'
 
@@ -10,7 +11,7 @@ class SetupDB(unittest.TestCase):
 		if os.path.isfile(TEST_DB_PATH):
 			raise Exception('Testing db path "{}" already exists.'.format(TEST_DB_PATH))
 		
-		self.db = SSIDStatDB(TEST_DB_PATH)
+		self.db = ssidstat.common.db.SSIDStatDB(TEST_DB_PATH)
 
 	def tearDown(self):
 		os.remove(TEST_DB_PATH)
@@ -18,7 +19,8 @@ class SetupDB(unittest.TestCase):
 class UpdateSSIDTrafficHistoryTest(SetupDB):
 	def test_update_ssid_traffic_history(self):
 		try:
-			self.db.update_ssid_traffic_history('adapter_name', 'ssid_name', 100, 200)
+			self.db.update_ssid_traffic_history('adapter_name', 'ssid_name', 100, 200, use_hourly_table=True)
+			self.db.update_ssid_traffic_history('adapter_name', 'ssid_name', 100, 200, use_hourly_table=False)
 		except:
 			self.fail()
 
@@ -26,30 +28,58 @@ class QuerySSIDTrafficHistoryTest(SetupDB):
 	def setUp(self):
 		super(QuerySSIDTrafficHistoryTest, self).setUp()
 
-		self.db.update_ssid_traffic_history('adapter0', 'ssid0', 100, 200)
-		self.db.update_ssid_traffic_history('adapter0', 'ssid1', 105, 205)
-		self.db.update_ssid_traffic_history('adapter0', 'ssid2', 110, 210)
+		self.t = 1483228800
 
-		self.db.update_ssid_traffic_history('adapter1', 'ssid1', 10, 20)
-		self.db.update_ssid_traffic_history('adapter1', 'ssid3', 15, 25)
+		self.db.add_ssid_traffic_history('adapter0', 'ssid0', 1, 1, timestamp=0*3600+self.t)
+		self.db.add_ssid_traffic_history('adapter0', 'ssid0', 2, 2, timestamp=1*3600+self.t)
+		self.db.add_ssid_traffic_history('adapter0', 'ssid0', 4, 4, timestamp=2*3600+self.t)
+		self.db.add_ssid_traffic_history('adapter0', 'ssid0', 10, 10, timestamp=2*3600+self.t)
+		self.db.add_ssid_traffic_history('adapter0', 'ssid1', 100, 100, timestamp=0*3600+self.t)
 
-	def test_query_ssid_stat(self):
-		ssid0_stat = self.db.query_ssid_stat('ssid0')
+	def test_query_adapter_ssid_stat(self):
+		ssid0_hourly_stat = self.db.query_adapter_ssid_stat('adapter0', 'ssid0', use_hourly_table=True, timestamp=2*3600+self.t)
+		self.assertEqual(ssid0_hourly_stat['adapter'], 'adapter0')
+		self.assertEqual(ssid0_hourly_stat['ssid'], 'ssid0')
+		self.assertEqual(ssid0_hourly_stat['rx'], 14)
+		self.assertEqual(ssid0_hourly_stat['tx'], 14)
 
-		self.assertEqual(ssid0_stat['ssid'], 'ssid0')
-		self.assertEqual(ssid0_stat['rx'], 100)
-		self.assertEqual(ssid0_stat['tx'], 200)
+		ssid0_monthly_stat = self.db.query_adapter_ssid_stat('adapter0', 'ssid0', use_hourly_table=False, timestamp=2*3600+self.t)
+		self.assertEqual(ssid0_monthly_stat['adapter'], 'adapter0')
+		self.assertEqual(ssid0_monthly_stat['ssid'], 'ssid0')
+		self.assertEqual(ssid0_monthly_stat['rx'], 1 + 2 + 4 + 10)
+		self.assertEqual(ssid0_monthly_stat['tx'], 1 + 2 + 4 + 10)
 
-	def test_query_all_ssid_stat(self):
-		q = self.db.query_all_ssid_stat()
+	def test_query_all_ssid_stat_day(self):
+		q = self.db.query_all_ssid_stat(resolution=ssidstat.common.db.DAY, timestamp=24*3600+self.t-1)
 
-		self.assertEqual(len(q), 2)
-		self.assertEqual(len(q['adapter0']), 3)
-		self.assertEqual(len(q['adapter1']), 2)
+		self.assertEqual(len(q), 1)
+		self.assertEqual(len(q['adapter0']), 2)
+
 		self.assertEqual(q['adapter0'][0]['ssid'], 'ssid0')
-		self.assertEqual(q['adapter0'][0]['rx'], 100)
-		self.assertEqual(q['adapter1'][0]['ssid'], 'ssid1')
-		self.assertEqual(q['adapter1'][0]['rx'], 10)
+		self.assertEqual(q['adapter0'][0]['rx'], 1 + 2 + 4 + 10)
+
+		self.assertEqual(q['adapter0'][1]['ssid'], 'ssid1')
+		self.assertEqual(q['adapter0'][1]['rx'], 100)
+
+	def test_query_all_ssid_stat_month(self):
+		self.db.add_ssid_traffic_history('adapter0', 'ssid2', 11, 11, timestamp=1488*3600+self.t)
+		self.db.add_ssid_traffic_history('adapter0', 'ssid2', 12, 12, timestamp=1488*3600+self.t+2)
+		q = self.db.query_all_ssid_stat(resolution=ssidstat.common.db.MONTH, timestamp=1488*3600+self.t+212)
+
+		self.assertEqual(len(q), 1)
+		self.assertEqual(len(q['adapter0']), 1)
+		self.assertEqual(q['adapter0'][0]['ssid'], 'ssid2')
+		self.assertEqual(q['adapter0'][0]['rx'], 11 + 12)
+
+	def test_clear_ssid_stat(self):
+		self.db.add_ssid_traffic_history('adapter0', 'ssid0', 1000, 1, timestamp=3600*24*80+self.t+100)
+
+		q = self.db.query_all_ssid_stat(resolution=ssidstat.common.db.DAY, timestamp=3600*24*80+self.t+100)
+		self.assertEqual(len(q), 1)
+		self.assertEqual(len(q['adapter0']), 1)
+		self.assertEqual(q['adapter0'][0]['ssid'], 'ssid0')
+		self.assertEqual(q['adapter0'][0]['rx'], 1000)
+		self.assertEqual(q['adapter0'][0]['tx'], 1)
 
 if __name__ == '__main__':
 	unittest.main()
