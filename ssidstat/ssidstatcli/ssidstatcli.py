@@ -52,8 +52,8 @@ def main():
 	try:
 		ssidstat_db = db.SSIDStatDB(opts.db)
 		output(ssidstat_db.query_all_ssid_stat())
-	except:
-		print 'Error opening DB file {}'.format(opts.db)
+	except Exception as e:
+		print 'Error on opening DB file {}: {}'.format(opts.db, e.message)
 		sys.exit(1)
 
 if __name__ == '__main__':

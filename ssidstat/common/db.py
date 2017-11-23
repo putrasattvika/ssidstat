@@ -2,6 +2,7 @@ import json
 import sqlite3
 
 from datetime import datetime
+from contextlib import contextmanager
 
 class SSIDStatDB(object):
 	def __init__(self, dbfile):
@@ -13,61 +14,57 @@ class SSIDStatDB(object):
 	def date_to_str(self, date, format='%Y-%m-%d'):
 		return datetime.strftime(date, format)
 
-	def init_db(self):
+	@contextmanager
+	def db_cursor(self, commit=True):
 		conn = sqlite3.connect(self.dbfile)
-		c = conn.cursor()
 
-		c.execute('''
-			CREATE TABLE IF NOT EXISTS ssid_traffic_history (
-				date text,
-				adapter text,
-				ssid text,
-				rx integer,
-				tx integer,
-				PRIMARY KEY (date, adapter, ssid)
-			)
-		''')
+		yield conn.cursor()
 
-		c.execute('''
-			CREATE TABLE IF NOT EXISTS boot_traffic_history (
-				boot_id text,
-				adapter text,
-				rx integer,
-				tx integer,
-				PRIMARY KEY (boot_id, adapter)
-			)
-		''')
-
-		conn.commit()
+		if commit: conn.commit()
 		conn.close()
+
+	def init_db(self):
+		with self.db_cursor() as c:
+			c.execute('''
+				CREATE TABLE IF NOT EXISTS ssid_traffic_history (
+					date text,
+					adapter text,
+					ssid text,
+					rx integer,
+					tx integer,
+					PRIMARY KEY (date, adapter, ssid)
+				)
+			''')
+
+			c.execute('''
+				CREATE TABLE IF NOT EXISTS boot_traffic_history (
+					boot_id text,
+					adapter text,
+					rx integer,
+					tx integer,
+					PRIMARY KEY (boot_id, adapter)
+				)
+			''')
 
 	def update_ssid_traffic_history(self, adapter, ssid, rx, tx, date=datetime.now()):
-		conn = sqlite3.connect(self.dbfile)
-		c = conn.cursor()
+		with self.db_cursor() as c:
+			query = '''
+				INSERT OR REPLACE INTO ssid_traffic_history (date, adapter, ssid, rx, tx)
+					VALUES ( ?, ?, ?, ?, ? );
+			'''
 
-		query = '''
-			INSERT OR REPLACE INTO ssid_traffic_history (date, adapter, ssid, rx, tx) 
-				VALUES ( ?, ?, ?, ?, ? );
-		'''
-
-		c.execute(query, (self.date_to_str(date), adapter, ssid, rx, tx))
-
-		conn.commit()
-		conn.close()
+			c.execute(query, (self.date_to_str(date), adapter, ssid, rx, tx))
 
 	def query_ssid_stat(self, ssid, date=datetime.now()):
-		conn = sqlite3.connect(self.dbfile)
-		c = conn.cursor()
+		with self.db_cursor(commit=False) as c:
+			query = '''
+				SELECT date, ssid, rx, tx
+				FROM ssid_traffic_history
+				WHERE ssid=? AND date=?;
+			'''
 
-		query = '''
-			SELECT date, ssid, rx, tx
-			FROM ssid_traffic_history
-			WHERE ssid=? AND date=?;
-		'''
-
-		c.execute(query, (ssid, self.date_to_str(date)))
-		result = c.fetchone()
-		conn.close()	
+			c.execute(query, (ssid, self.date_to_str(date)))
+			result = c.fetchone()
 
 		if result == None:
 			result = (self.date_to_str(date), ssid, 0, 0)
@@ -80,19 +77,16 @@ class SSIDStatDB(object):
 		}
 
 	def query_all_ssid_stat(self, date=datetime.now()):
-		conn = sqlite3.connect(self.dbfile)
-		c = conn.cursor()
+		with self.db_cursor(commit=False) as c:
+			query = '''
+				SELECT date, ssid, rx, tx, adapter
+				FROM ssid_traffic_history
+				WHERE date=?
+				ORDER BY adapter, ssid;
+			'''
 
-		query = '''
-			SELECT date, ssid, rx, tx, adapter
-			FROM ssid_traffic_history
-			WHERE date=?
-			ORDER BY adapter, ssid;
-		'''
-
-		c.execute(query, (self.date_to_str(date),))
-		results = c.fetchall()
-		conn.close()
+			c.execute(query, (self.date_to_str(date),))
+			results = c.fetchall()
 
 		d_result = {}
 
@@ -113,32 +107,24 @@ class SSIDStatDB(object):
 		return d_result
 
 	def update_boot_traffic_history(self, boot_id, adapter, rx, tx):
-		conn = sqlite3.connect(self.dbfile)
-		c = conn.cursor()
+		with self.db_cursor() as c:
+			query = '''
+				INSERT OR REPLACE INTO boot_traffic_history (boot_id, adapter, rx, tx)
+					VALUES ( ?, ?, ?, ? );
+			'''
 
-		query = '''
-			INSERT OR REPLACE INTO boot_traffic_history (boot_id, adapter, rx, tx) 
-				VALUES ( ?, ?, ?, ? );
-		'''
-
-		c.execute(query, (boot_id, adapter, rx, tx))
-
-		conn.commit()
-		conn.close()
+			c.execute(query, (boot_id, adapter, rx, tx))
 
 	def query_boot_traffic_history(self, boot_id, adapter):
-		conn = sqlite3.connect(self.dbfile)
-		c = conn.cursor()
+		with self.db_cursor(commit=False) as c:
+			query = '''
+				SELECT rx, tx
+				FROM boot_traffic_history
+				WHERE boot_id=? AND adapter=?;
+			'''
 
-		query = '''
-			SELECT rx, tx
-			FROM boot_traffic_history
-			WHERE boot_id=? AND adapter=?;
-		'''
-
-		c.execute(query, (boot_id, adapter))
-		result = c.fetchone()
-		conn.close()	
+			c.execute(query, (boot_id, adapter))
+			result = c.fetchone()
 
 		if result == None:
 			return None
@@ -151,15 +137,10 @@ class SSIDStatDB(object):
 		}
 
 	def clear_boot_traffic_history(self, adapter):
-		conn = sqlite3.connect(self.dbfile)
-		c = conn.cursor()
+		with self.db_cursor() as c:
+			query = '''
+				DELETE FROM boot_traffic_history
+				WHERE adapter=?;
+			'''
 
-		query = '''
-			DELETE FROM boot_traffic_history
-			WHERE adapter=?;
-		'''
-
-		c.execute(query, (adapter, ))
-
-		conn.commit()
-		conn.close()
+			c.execute(query, (adapter, ))
