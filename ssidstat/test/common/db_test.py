@@ -16,14 +16,6 @@ class SetupDB(unittest.TestCase):
 	def tearDown(self):
 		os.remove(TEST_DB_PATH)
 
-class UpdateSSIDTrafficHistoryTest(SetupDB):
-	def test_update_ssid_traffic_history(self):
-		try:
-			self.db.update_ssid_traffic_history('adapter_name', 'ssid_name', 100, 200, use_hourly_table=True)
-			self.db.update_ssid_traffic_history('adapter_name', 'ssid_name', 100, 200, use_hourly_table=False)
-		except:
-			self.fail()
-
 class QuerySSIDTrafficHistoryTest(SetupDB):
 	def setUp(self):
 		super(QuerySSIDTrafficHistoryTest, self).setUp()
@@ -35,19 +27,6 @@ class QuerySSIDTrafficHistoryTest(SetupDB):
 		self.db.add_ssid_traffic_history('adapter0', 'ssid0', 4, 4, timestamp=2*3600+self.t)
 		self.db.add_ssid_traffic_history('adapter0', 'ssid0', 10, 10, timestamp=2*3600+self.t)
 		self.db.add_ssid_traffic_history('adapter0', 'ssid1', 100, 100, timestamp=0*3600+self.t)
-
-	def test_query_adapter_ssid_stat(self):
-		ssid0_hourly_stat = self.db.query_adapter_ssid_stat('adapter0', 'ssid0', use_hourly_table=True, timestamp=2*3600+self.t)
-		self.assertEqual(ssid0_hourly_stat['adapter'], 'adapter0')
-		self.assertEqual(ssid0_hourly_stat['ssid'], 'ssid0')
-		self.assertEqual(ssid0_hourly_stat['rx'], 14)
-		self.assertEqual(ssid0_hourly_stat['tx'], 14)
-
-		ssid0_monthly_stat = self.db.query_adapter_ssid_stat('adapter0', 'ssid0', use_hourly_table=False, timestamp=2*3600+self.t)
-		self.assertEqual(ssid0_monthly_stat['adapter'], 'adapter0')
-		self.assertEqual(ssid0_monthly_stat['ssid'], 'ssid0')
-		self.assertEqual(ssid0_monthly_stat['rx'], 1 + 2 + 4 + 10)
-		self.assertEqual(ssid0_monthly_stat['tx'], 1 + 2 + 4 + 10)
 
 	def test_query_all_ssid_stat_day(self):
 		q = self.db.query_all_ssid_stat(resolution=ssidstat.common.db.DAY, timestamp=24*3600+self.t-1)
@@ -63,8 +42,8 @@ class QuerySSIDTrafficHistoryTest(SetupDB):
 
 	def test_query_all_ssid_stat_month(self):
 		self.db.add_ssid_traffic_history('adapter0', 'ssid2', 11, 11, timestamp=1488*3600+self.t)
-		self.db.add_ssid_traffic_history('adapter0', 'ssid2', 12, 12, timestamp=1488*3600+self.t+2)
-		q = self.db.query_all_ssid_stat(resolution=ssidstat.common.db.MONTH, timestamp=1488*3600+self.t+212)
+		self.db.add_ssid_traffic_history('adapter0', 'ssid2', 12, 12, timestamp=1512*3600+self.t)
+		q = self.db.query_all_ssid_stat(resolution=ssidstat.common.db.MONTH, timestamp=1536*3600+self.t)
 
 		self.assertEqual(len(q), 1)
 		self.assertEqual(len(q['adapter0']), 1)
@@ -83,4 +62,3 @@ class QuerySSIDTrafficHistoryTest(SetupDB):
 
 if __name__ == '__main__':
 	unittest.main()
-

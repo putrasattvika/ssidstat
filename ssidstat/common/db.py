@@ -7,11 +7,14 @@ import db_utils
 from datetime import datetime
 from contextlib import contextmanager
 
-# hour table limit: 40 days
-_HOURLY_LIMIT_SECS = 3600*24*40
+from models.boot_traffic_history import BootTrafficHistory
+from models.hourly_traffic_history import HourlyTrafficHistory
+from models.monthly_traffic_history import MonthlyTrafficHistory
 
-# month table limit: 400 days
-_MONTHLY_LIMIT_SECS = 3600*24*400
+# table names
+_BOOT_TABLE_NAME = 'boot_traffic_history'
+_HOURLY_TABLE_NAME = 'hourly_ssid_traffic_history'
+_MONTHLY_TABLE_NAME = 'monthly_ssid_traffic_history'
 
 # constants
 HOUR  = 0
@@ -43,190 +46,25 @@ class SSIDStatDB(object):
 		conn.close()
 
 	def init_db(self):
-		with self.db_cursor() as c:
-			# hourly SSID traffic history
-			c.execute('''
-				CREATE TABLE IF NOT EXISTS hourly_ssid_traffic_history (
-					hour_ts integer,
-					adapter text,
-					ssid text,
-					rx integer,
-					tx integer,
-					PRIMARY KEY (hour_ts, adapter, ssid)
-				)
-			''')
-
-			# monthly SSID traffic history
-			c.execute('''
-				CREATE TABLE IF NOT EXISTS monthly_ssid_traffic_history (
-					month_ts integer,
-					adapter text,
-					ssid text,
-					rx integer,
-					tx integer,
-					PRIMARY KEY (month_ts, adapter, ssid)
-				)
-			''')
-
-			# per-boot adapter traffic history
-			c.execute('''
-				CREATE TABLE IF NOT EXISTS boot_traffic_history (
-					boot_id text,
-					adapter text,
-					rx integer,
-					tx integer,
-					PRIMARY KEY (boot_id, adapter)
-				)
-			''')
-
-	def update_ssid_traffic_history(self, adapter, ssid, rx, tx, use_hourly_table=True, timestamp=time.time()):
-		if use_hourly_table:
-			table_name = 'hourly_ssid_traffic_history'
-			pk = 'hour_ts'
-			trunc_func = db_utils.truncate_time_hour
-		else:
-			table_name = 'monthly_ssid_traffic_history'
-			pk = 'month_ts'
-			trunc_func = db_utils.truncate_time_month
-
-		with self.db_cursor() as c:
-			query = '''
-				INSERT OR REPLACE INTO {} ({}, adapter, ssid, rx, tx)
-					VALUES ( ?, ?, ?, ?, ? );
-			'''.format(table_name, pk)
-
-			c.execute(query, (trunc_func(timestamp), adapter, ssid, rx, tx))
+		self.boot_traffic_history = BootTrafficHistory(self.dbfile, _BOOT_TABLE_NAME)
+		self.hourly_traffic_history = HourlyTrafficHistory(self.dbfile, _HOURLY_TABLE_NAME)
+		self.monthly_traffic_history = MonthlyTrafficHistory(self.dbfile, _MONTHLY_TABLE_NAME)
 
 	def add_ssid_traffic_history(self, adapter, ssid, delta_rx, delta_tx, timestamp=time.time()):
-		hourly_prev = self.query_adapter_ssid_stat(adapter, ssid, use_hourly_table=True, timestamp=timestamp)
-		monthly_prev = self.query_adapter_ssid_stat(adapter, ssid, use_hourly_table=False, timestamp=timestamp)
-
-		self.update_ssid_traffic_history(
-			adapter, ssid,
-			hourly_prev['rx']+delta_rx, hourly_prev['tx']+delta_tx,
-			use_hourly_table=True, timestamp=timestamp
-		)
-
-		self.update_ssid_traffic_history(
-			adapter, ssid,
-			monthly_prev['rx']+delta_rx, monthly_prev['tx']+delta_tx,
-			use_hourly_table=False, timestamp=timestamp
-		)
-
-		self.clear_ssid_traffic_history(timestamp=timestamp)
-
-	def query_adapter_ssid_stat(self, adapter, ssid, use_hourly_table=True, timestamp=time.time()):
-		if use_hourly_table:
-			table_name = 'hourly_ssid_traffic_history'
-			pk = 'hour_ts'
-			trunc_func = db_utils.truncate_time_hour
-		else:
-			table_name = 'monthly_ssid_traffic_history'
-			pk = 'month_ts'
-			trunc_func = db_utils.truncate_time_month
-
-		with self.db_cursor(commit=False) as c:
-			query = '''
-				SELECT {0}, adapter, ssid, rx, tx
-				FROM {1}
-				WHERE adapter=? AND ssid=? AND {0}=?;
-			'''.format(pk, table_name)
-
-			c.execute(query, (adapter, ssid, trunc_func(timestamp)))
-			result = c.fetchone()
-
-		if result == None:
-			result = (trunc_func(timestamp), adapter, ssid, 0, 0)
-
-		return {
-			'timestamp': trunc_func(timestamp),
-			'adapter': adapter,
-			'ssid': ssid,
-			'rx': result[3],
-			'tx': result[4]
-		}
+		self.hourly_traffic_history.add(adapter, ssid, delta_rx, delta_tx, timestamp=timestamp)
+		self.monthly_traffic_history.add(adapter, ssid, delta_rx, delta_tx, timestamp=timestamp)
 
 	def query_all_ssid_stat(self, resolution=DAY, timestamp=time.time()):
-		with self.db_cursor(commit=False) as c:
-			query = '''
-				SELECT hour_ts, ssid, sum(rx), sum(tx), adapter
-				FROM hourly_ssid_traffic_history
-				WHERE hour_ts >= ?
-				GROUP BY adapter, ssid
-				ORDER BY adapter, ssid;
-			'''
+		start_time = _truncate_func_map[resolution](timestamp)
+		end_time = timestamp
 
-			c.execute(query, (_truncate_func_map[resolution](timestamp),))
-			results = c.fetchall()
-
-		d_result = {}
-
-		for r in results:
-			hour_ts, ssid, rx, tx, adapter = r
-
-			if adapter not in d_result:
-				d_result[adapter] = []
-
-			d_result[adapter].append({
-				'ssid': ssid,
-				'hour_ts': hour_ts,
-				'adapter': adapter,
-				'rx': rx,
-				'tx': tx
-			})
-
-		return d_result
-
-	def clear_ssid_traffic_history(self, timestamp=time.time()):
-		with self.db_cursor() as c:
-			query = '''
-				DELETE FROM hourly_ssid_traffic_history
-				WHERE hour_ts < ?;
-			'''
-			c.execute(query, (timestamp - _HOURLY_LIMIT_SECS, ))
-
-			query = '''
-				DELETE FROM monthly_ssid_traffic_history
-				WHERE month_ts < ?;
-			'''
-			c.execute(query, (timestamp - _MONTHLY_LIMIT_SECS, ))
-
+		return self.hourly_traffic_history.query_all(start_time=start_time, end_time=end_time, timestamp=timestamp)
 
 	def update_boot_traffic_history(self, boot_id, adapter, rx, tx):
-		with self.db_cursor() as c:
-			query = '''
-				INSERT OR REPLACE INTO boot_traffic_history (boot_id, adapter, rx, tx)
-					VALUES ( ?, ?, ?, ? );
-			'''
-
-			c.execute(query, (boot_id, adapter, rx, tx))
+		self.boot_traffic_history.update(boot_id, adapter, rx, tx)
 
 	def query_boot_traffic_history(self, boot_id, adapter):
-		with self.db_cursor(commit=False) as c:
-			query = '''
-				SELECT rx, tx
-				FROM boot_traffic_history
-				WHERE boot_id=? AND adapter=?;
-			'''
-
-			c.execute(query, (boot_id, adapter))
-			result = c.fetchone()
-
-		if result == None:
-			return None
-
-		return {
-			'boot_id': boot_id,
-			'adapter': adapter,
-			'rx': result[0],
-			'tx': result[1]
-		}
+		return self.boot_traffic_history.query(boot_id, adapter)
 
 	def clear_boot_traffic_history(self, adapter):
-		with self.db_cursor() as c:
-			query = '''
-				DELETE FROM boot_traffic_history
-				WHERE adapter=?;
-			'''
-
-			c.execute(query, (adapter, ))
+		self.boot_traffic_history.clear(adapter)
