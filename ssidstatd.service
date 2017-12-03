@@ -1,0 +1,12 @@
+[Unit]
+Description=Per-SSID bandwidth monitor
+After=network.target
+
+[Service]
+Type=forking
+PIDFile=/var/lib/ssidstat/ssidstatd.pid
+ExecStart=/usr/bin/ssidstatd
+ExecStop=/usr/bin/ssidstatd --stop
+
+[Install]
+WantedBy=multi-user.target
