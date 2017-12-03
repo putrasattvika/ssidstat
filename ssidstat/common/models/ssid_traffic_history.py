@@ -28,7 +28,10 @@ class SSIDTrafficHistory(BaseModel):
 	def truncate_time(timestamp):
 		raise NotImplementedError
 
-	def query(self, adapter, ssid, timestamp=time.time()):
+	def query(self, adapter, ssid, timestamp=None):
+		if not timestamp:
+			timestamp = time.time()
+
 		with self.db_cursor(commit=False) as c:
 			query = '''
 				SELECT timestamp, adapter, ssid, rx, tx
@@ -50,7 +53,10 @@ class SSIDTrafficHistory(BaseModel):
 			'tx': result[4]
 		}
 
-	def query_all(self, start_time=None, end_time=None, timestamp=time.time()):
+	def query_all(self, start_time=None, end_time=None, timestamp=None):
+		if not timestamp:
+			timestamp = time.time()
+
 		if not end_time:
 			end_time = timestamp
 
@@ -87,7 +93,11 @@ class SSIDTrafficHistory(BaseModel):
 
 		return query_result
 
-	def update(self, adapter, ssid, rx, tx, timestamp=time.time()):
+	def update(self, adapter, ssid, rx, tx, timestamp=None):
+		if not timestamp:
+			timestamp = time.time()
+
+		print 'updating {} for ssid={}, ts=[{}->{}]'.format(self.table_name, ssid, timestamp, self.truncate_time(timestamp))
 		with self.db_cursor() as c:
 			query = '''
 				INSERT OR REPLACE INTO {} (timestamp, adapter, ssid, rx, tx)
@@ -96,7 +106,10 @@ class SSIDTrafficHistory(BaseModel):
 
 			c.execute(query, (self.truncate_time(timestamp), adapter, ssid, rx, tx))
 
-	def add(self, adapter, ssid, delta_rx, delta_tx, timestamp=time.time()):
+	def add(self, adapter, ssid, delta_rx, delta_tx, timestamp=None):
+		if not timestamp:
+			timestamp = time.time()
+
 		prev = self.query(adapter, ssid, timestamp=timestamp)
 
 		self.update(
@@ -107,7 +120,10 @@ class SSIDTrafficHistory(BaseModel):
 
 		self.clear(timestamp=timestamp)
 
-	def clear(self, timestamp=time.time()):
+	def clear(self, timestamp=None):
+		if not timestamp:
+			timestamp = time.time()
+
 		with self.db_cursor() as c:
 			query = '''
 				DELETE FROM {}

@@ -3,17 +3,17 @@ from datetime import datetime
 
 from ssid_traffic_history import SSIDTrafficHistory
 
-_MONTHLY_LIMIT_SECS = 3600*24*400
+_WEEKLY_LIMIT_SECS = 3600*24*400
 
-class MonthlyTrafficHistory(SSIDTrafficHistory):
+class WeeklyTrafficHistory(SSIDTrafficHistory):
 	def __init__(self, dbfile, table_name):
-		super(MonthlyTrafficHistory, self).__init__(dbfile, table_name, _MONTHLY_LIMIT_SECS)
+		super(WeeklyTrafficHistory, self).__init__(dbfile, table_name, _WEEKLY_LIMIT_SECS)
 
 	def truncate_time(self, timestamp):
-		dt_month = datetime.strptime(datetime.strftime(datetime.fromtimestamp(timestamp), '%Y-%m'), '%Y-%m')
-		return int((dt_month - datetime.fromtimestamp(0)).total_seconds())
+		dt_week = datetime.strptime(datetime.strftime(datetime.fromtimestamp(time.time()), '%Y-%W-1'), '%Y-%W-%w')
+		return int((dt_week - datetime.fromtimestamp(0)).total_seconds())
 
-	def query_last_12_months(self, ssid, timestamp=None):
+	def query_last_12_weeks(self, ssid, timestamp=None):
 		if not timestamp:
 			timestamp = time.time()
 

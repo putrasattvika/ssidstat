@@ -3,17 +3,16 @@ from datetime import datetime
 
 from ssid_traffic_history import SSIDTrafficHistory
 
-_MONTHLY_LIMIT_SECS = 3600*24*400
+_DAILY_LIMIT_SECS = 3600*24*400
 
-class MonthlyTrafficHistory(SSIDTrafficHistory):
+class DailyTrafficHistory(SSIDTrafficHistory):
 	def __init__(self, dbfile, table_name):
-		super(MonthlyTrafficHistory, self).__init__(dbfile, table_name, _MONTHLY_LIMIT_SECS)
+		super(DailyTrafficHistory, self).__init__(dbfile, table_name, _DAILY_LIMIT_SECS)
 
 	def truncate_time(self, timestamp):
-		dt_month = datetime.strptime(datetime.strftime(datetime.fromtimestamp(timestamp), '%Y-%m'), '%Y-%m')
-		return int((dt_month - datetime.fromtimestamp(0)).total_seconds())
+		return int(timestamp/(24*3600))*(24*3600)
 
-	def query_last_12_months(self, ssid, timestamp=None):
+	def query_last_30_days(self, ssid, timestamp=None):
 		if not timestamp:
 			timestamp = time.time()
 
@@ -24,7 +23,7 @@ class MonthlyTrafficHistory(SSIDTrafficHistory):
 				WHERE ssid = ?
 				GROUP BY timestamp
 				ORDER BY timestamp ASC
-				LIMIT 12
+				LIMIT 30
 			'''.format(self.table_name)
 
 			c.execute(query, (ssid, ))
