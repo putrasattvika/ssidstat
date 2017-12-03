@@ -15,7 +15,7 @@ makedepends=('python2-setuptools')
 package() {
     cd $srcdir/
     python2 setup.py install -O1 --root="${pkgdir}" --prefix=/usr
-    install -Dm644 "$srcdir/ssidstatd.service" "$pkgdir/usr/lib/systemd/system/ssidstatd.service"
+    install -Dm644 "ssidstatd.service" "$pkgdir/usr/lib/systemd/system/ssidstatd.service"
 
     mkdir -p "$pkgdir"/var/lib/ssidstat
 }
