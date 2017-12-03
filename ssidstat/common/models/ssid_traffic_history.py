@@ -97,7 +97,6 @@ class SSIDTrafficHistory(BaseModel):
 		if not timestamp:
 			timestamp = time.time()
 
-		print 'updating {} for ssid={}, ts=[{}->{}]'.format(self.table_name, ssid, timestamp, self.truncate_time(timestamp))
 		with self.db_cursor() as c:
 			query = '''
 				INSERT OR REPLACE INTO {} (timestamp, adapter, ssid, rx, tx)
