@@ -1,3 +1,4 @@
+import json
 import tabulate
 from datetime import datetime
 
@@ -13,88 +14,121 @@ def byte_format(size):
 
 	return result
 
-def default(stats):
-	headers = ['Adapter', 'SSID', 'Receive (rx)', 'Transmit (tx)', 'Total']
+def filter(stats, adapter_ssid_pairs = None):
+	if not adapter_ssid_pairs:
+		return stats
+
+	filtered_stats = {}
+	for adapter in stats:
+		filtered_stats[adapter] = []
+		for ssid_stat in stats[adapter]:
+			if (adapter, ssid_stat['ssid']) in adapter_ssid_pairs:
+				filtered_stats[adapter].append(ssid_stat)
+
+	return filtered_stats
+
+def tabular_output(data):
+	if len(data) == 0:
+		return 'No data'
+
+	headers = data['headers']
 	table = []
+
+	for entry in data['data']:
+		table.append( [entry[h] for h in headers] )
+
+	output = tabulate.tabulate(table, headers=headers)
+	if ('message' in data) and (data['message']) and (len(data['message']) > 0):
+		output = data['message'] + output
+
+	return output
+
+def json_output(data):
+	return json.dumps(data['data'])
+
+def default(stats):
+	result = {}
+	result['headers'] = ['Adapter', 'SSID', 'Receive (rx)', 'Transmit (tx)', 'Total']
+	result['data'] = []
 
 	for adapter in stats:
 		for ssid_stat in stats[adapter]:
-			table.append([
-				adapter,
-				ssid_stat['ssid'],
-				byte_format(ssid_stat['rx']),
-				byte_format(ssid_stat['tx']),
-				byte_format(ssid_stat['rx'] + ssid_stat['tx'])
-			])
+			result['data'].append({
+				'Adapter': adapter,
+				'SSID': ssid_stat['ssid'],
+				'Receive (rx)': byte_format(ssid_stat['rx']),
+				'Transmit (tx)': byte_format(ssid_stat['tx']),
+				'Total': byte_format(ssid_stat['rx'] + ssid_stat['tx'])
+			})
 
-	return tabulate.tabulate(table, headers=headers)
+	return result
 
 def hourly(ssid, stats):
-	headers = ['Time', 'Receive (rx)', 'Transmit (tx)', 'Total']
-	table = []
+	result = {}
+	result['message'] = 'Hourly traffic for SSID {}\n\n'.format(ssid)
+	result['headers'] = ['Time', 'Receive (rx)', 'Transmit (tx)', 'Total']
+	result['data'] = []
 
 	for stat in stats:
-		table.append([
-			datetime.strftime(datetime.fromtimestamp(stat['timestamp']), '%Y-%m-%d %H:%M'),
-			byte_format(stat['rx']),
-			byte_format(stat['tx']),
-			byte_format(stat['rx'] + stat['tx'])
-		])
+		result['data'].append({
+			'Time': datetime.strftime(datetime.fromtimestamp(stat['timestamp']), '%Y-%m-%d %H:%M'),
+			'Receive (rx)': byte_format(stat['rx']),
+			'Transmit (tx)': byte_format(stat['tx']),
+			'Total': byte_format(stat['rx'] + stat['tx'])
+		})
 
-	output  = 'Hourly traffic for SSID {}\n\n'.format(ssid)
-	output += tabulate.tabulate(table, headers=headers)
-	return output
+	return result
 
 def daily(ssid, stats):
-	headers = ['Date', 'Receive (rx)', 'Transmit (tx)', 'Total']
-	table = []
+	result = {}
+	result['message'] = 'Daily traffic for SSID {}\n\n'.format(ssid)
+	result['headers'] = ['Date', 'Receive (rx)', 'Transmit (tx)', 'Total']
+	result['data'] = []
 
 	for stat in stats:
-		table.append([
-			datetime.strftime(datetime.fromtimestamp(stat['timestamp']), '%Y-%m-%d'),
-			byte_format(stat['rx']),
-			byte_format(stat['tx']),
-			byte_format(stat['rx'] + stat['tx'])
-		])
+		result['data'].append({
+			'Date': datetime.strftime(datetime.fromtimestamp(stat['timestamp']), '%Y-%m-%d'),
+			'Receive (rx)': byte_format(stat['rx']),
+			'Transmit (tx)': byte_format(stat['tx']),
+			'Total': byte_format(stat['rx'] + stat['tx'])
+		})
 
-	output  = 'Daily traffic for SSID {}\n\n'.format(ssid)
-	output += tabulate.tabulate(table, headers=headers)
-	return output
+	return result
 
 def weekly(ssid, stats):
-	headers = ['Date', 'Receive (rx)', 'Transmit (tx)', 'Total']
-	table = []
+	result = {}
+	result['message'] = 'Weekly traffic for SSID {}\n\n'.format(ssid)
+	result['headers'] = ['Date', 'Receive (rx)', 'Transmit (tx)', 'Total']
+	result['data'] = []
 
 	for stat in stats:
 		start_date = datetime.fromtimestamp(stat['timestamp'])
 		end_date = datetime.fromtimestamp(stat['timestamp'] + 7*24*3600-1)
 
-		table.append([
-			'{} ~ {}'.format(
+		result['data'].append({
+			'Date': '{} ~ {}'.format(
 				datetime.strftime(start_date, '%Y-%m-%d'),
 				datetime.strftime(end_date, '%Y-%m-%d'),
 			),
-			byte_format(stat['rx']),
-			byte_format(stat['tx']),
-			byte_format(stat['rx'] + stat['tx'])
-		])
+			'Receive (rx)': byte_format(stat['rx']),
+			'Transmit (tx)': byte_format(stat['tx']),
+			'Total': byte_format(stat['rx'] + stat['tx'])
+		})
 
-	output  = 'Weekly traffic for SSID {}\n\n'.format(ssid)
-	output += tabulate.tabulate(table, headers=headers)
-	return output
+	return result
 
 def monthly(ssid, stats):
-	headers = ['Date', 'Receive (rx)', 'Transmit (tx)', 'Total']
-	table = []
+	result = {}
+	result['message'] = 'Monthly traffic for SSID {}\n\n'.format(ssid)
+	result['headers'] = ['Date', 'Receive (rx)', 'Transmit (tx)', 'Total']
+	result['data'] = []
 
 	for stat in stats:
-		table.append([
-			datetime.strftime(datetime.fromtimestamp(stat['timestamp']), '%B %Y'),
-			byte_format(stat['rx']),
-			byte_format(stat['tx']),
-			byte_format(stat['rx'] + stat['tx'])
-		])
+		result['data'].append({
+			'Date': datetime.strftime(datetime.fromtimestamp(stat['timestamp']), '%B %Y'),
+			'Receive (rx)': byte_format(stat['rx']),
+			'Transmit (tx)': byte_format(stat['tx']),
+			'Total': byte_format(stat['rx'] + stat['tx'])
+		})
 
-	output  = 'Monthly traffic for SSID {}\n\n'.format(ssid)
-	output += tabulate.tabulate(table, headers=headers)
-	return output
+	return result
